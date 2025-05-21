@@ -10,6 +10,11 @@ logger = logging.getLogger(__name__)
 
 GenericCallable = Callable[[Any], Any]
 
+try:
+    cache = functools.cache
+except AttributeError:
+    cache = functools.lru_cache(maxsize=None)
+
 
 def try_n_times(
     fn: Callable[..., Any],
@@ -80,7 +85,7 @@ def keep_trying(
     raise TimeoutError(f"Timeout on function call {fn}({args}{kwargs}) catching {errors}")
 
 
-@functools.cache
+@cache
 def get_unique_job_id() -> str:
     """
     In the cluster, it generates a hash from the unique job ID called NUPLAN_JOB_ID.
