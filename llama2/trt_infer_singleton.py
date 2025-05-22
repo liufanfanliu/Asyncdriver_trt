@@ -4,6 +4,7 @@ import torch
 import pycuda.driver as cuda
 import tensorrt as trt
 import onnxruntime as ort
+import time
 
 class TRTInferSingleton:
     _instance = None
@@ -33,6 +34,7 @@ class TRTInferSingleton:
         self._trt_logger = trt.Logger(trt.Logger.ERROR) if trt else None
 
         self._initialized = True
+        self._first_pop = True
 
     def get_engine_and_context(self, engine_path):
         if engine_path not in self._engine_cache:
@@ -47,12 +49,32 @@ class TRTInferSingleton:
         context = self._context_cache[engine_path]
         return engine, context
 
+    def save_inputs(self, file_path, inputs_embeds, attention_mask, position_ids):
+        """保存推理输入到文件"""
+        torch.save({
+            "inputs_embeds": inputs_embeds.cpu(),
+            "attention_mask": attention_mask.cpu(),
+            "position_ids": position_ids.cpu()
+        }, file_path)
+        print(f"[保存输入] 保存到 {file_path}")
+
+    def load_inputs_and_infer(self, file_path):
+        """从文件加载输入，并调用 infer"""
+        data = torch.load(file_path)
+        print(f"[加载输入] 从 {file_path} 加载")
+        return self.infer_hidden_states(
+            data["inputs_embeds"],
+            data["attention_mask"],
+            data["position_ids"]
+        )
+
     def infer_hidden_states(
         self,
         inputs_embeds: torch.Tensor,
         attention_mask: torch.Tensor,
         position_ids: torch.Tensor,
     ) -> torch.Tensor:
+        t0 = time.time()
         self._context.push()
         stream = cuda.Stream()
         with torch.no_grad():
@@ -97,6 +119,11 @@ class TRTInferSingleton:
                 device=inputs_embeds.device
             )
         self._context.pop()
+        if self._first_pop:
+            self._first_pop = False
+            self._context.pop()
+        t_end = time.time()
+        print(f"[时间] 总耗时: {t_end - t0:.4f}s")
         return hs_gpu
 
     def clear_cache(self):
@@ -104,7 +131,7 @@ class TRTInferSingleton:
         self._engine_cache.clear()
         self._context_cache.clear()
         try:
-            self.context.pop()
+            self._context.pop()
         except Exception:
             pass
 
@@ -145,6 +172,7 @@ class ONNXInferSingleton:
         position_ids: torch.Tensor,
     ) -> torch.Tensor:
         # ONNX 输入准备
+        t0 = time.time()
         onnx_inputs = {
             "inputs_embeds": inputs_embeds.detach().cpu().numpy().astype(np.float16),
             "attention_mask": attention_mask.detach().cpu().numpy().astype(np.int64),
@@ -154,6 +182,8 @@ class ONNXInferSingleton:
         ort_session = self.get_cached_session(self.onnx_path)
         hidden_states = ort_session.run(None, onnx_inputs)[0]
         hidden_states = torch.from_numpy(hidden_states).to(torch.float32).to(inputs_embeds.device)
+        t_end = time.time()
+        print(f"[时间] 总耗时: {t_end - t0:.4f}s")
         return hidden_states
 
     def clear_cache(self):
@@ -161,3 +191,19 @@ class ONNXInferSingleton:
 
     def __del__(self):
         self.clear_cache()
+
+    def load_inputs_and_infer(self, file_path):
+        """从文件加载输入，并调用 infer"""
+        data = torch.load(file_path)
+        print(f"[加载输入] 从 {file_path} 加载")
+        return self.infer_hidden_states(
+            data["inputs_embeds"],
+            data["attention_mask"],
+            data["position_ids"]
+        )
+
+if __name__ == "__main__":
+    infer_engine = TRTInferSingleton("/path/to/ttensorrt/enigne", device_id=0)
+    infer_onnx = ONNXInferSingleton("/path/to/onnx/model", providers=['CUDAExecutionProvider'])
+    output_egine = infer_engine.load_inputs_and_infer("/path/to/input/file")
+    output_onnx = infer_onnx.load_inputs_and_infer("/path/to/input/file")          

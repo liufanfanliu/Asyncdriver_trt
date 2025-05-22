@@ -53,6 +53,7 @@ from gameformer.predictor_modules import CrossTransformer
 from gameformer.train_utils import *
 from llama2.trt_infer_singleton import TRTInferSingleton
 from llama2.trt_infer_singleton import ONNXInferSingleton
+import time
 
 from peft import (  # noqa: E402
     LoraConfig,
@@ -844,6 +845,7 @@ class LlamaModel(LlamaPreTrainedModel):
         print("the inference_model_type is: ",self.inference_model_type)
 
         if inference_model_type == 'torch':
+            t0 = time.time()
             for idx, decoder_layer in enumerate(self.layers):
                 if output_hidden_states:
                     all_hidden_states += (hidden_states,)
@@ -882,6 +884,8 @@ class LlamaModel(LlamaPreTrainedModel):
                     all_self_attns += (layer_outputs[1],)
 
             hidden_states = self.norm(hidden_states)
+            t_pop_end = time.time()
+            print(f"[时间] 总耗时: {t_pop_end - t0:.4f}s")
 
         elif inference_model_type == 'onnx':
             infer_engine = ONNXInferSingleton(self.onnx_model_path, providers=['CUDAExecutionProvider'])
