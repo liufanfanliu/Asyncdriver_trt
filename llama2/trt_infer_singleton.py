@@ -28,7 +28,6 @@ class TRTInferSingleton:
         cuda.init()
         self._device = cuda.Device(self.device_id)
         self._context = self._device.make_context()
-        self._context.pop()
         self._engine_cache = {}
         self._context_cache = {}
         self._trt_logger = trt.Logger(trt.Logger.ERROR) if trt else None
