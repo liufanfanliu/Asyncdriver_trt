@@ -3,9 +3,9 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-model_path = "/home/fan/fan/AsyncDriver/mobileLLAMA_base/MobileLLaMA-1.4B-Base"
-onnx_path  = "/home/fan/fan/AsyncDriver/onnx32_lora_hidden/model.onnx"
-lora_model_path = "/home/fan/fan/AsyncDriver/mobileLLAMA_ckpt/checkpoint-2600"  # 替换为你的LoRA路径
+model_path = "/path/to/your/model/path"  # 替换为你的模型路径
+onnx_path  = "/path/to/onnx/model.onnx"  # 替换为你的ONNX保存路径
+lora_model_path = "/path/to/lora/model/path"  # 替换为你的LoRA路径
 
 device = torch.device("cpu")
 
@@ -13,7 +13,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_path, use_fast=False)
 base_model = AutoModelForCausalLM.from_pretrained(
     model_path,
     torch_dtype=torch.float32,
-    device_map=None
+    device_map=None,
     low_cpu_mem_usage=True
 )
 
