@@ -5,22 +5,22 @@ if(NOT CMAKE_BUILD_TYPE)
 set(CMAKE_BUILD_TYPE Release)
 endif()
 
-# 添加额外的优化编译选项
-
+# Add extra optimization compilation options
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -DNDEBUG -march=native")
-# 设置 TensorRT 和 CUDA 路径
+
+# Set TensorRT and CUDA paths
 set(TENSORRT_DIR $ENV{HOME}/TensorRT-10.9.0.34)
 set(CUDA_ROOT "/usr/local/cuda")
 
-# 添加头文件搜索路径
+# Add header file include paths
 include_directories(${TENSORRT_DIR}/include)
 include_directories(/usr/local/cuda/include)
 
-# 添加库文件搜索路径
+# Add library search paths
 link_directories(${TENSORRT_DIR}/lib)
 link_directories(/usr/local/cuda/lib64)
 
-# 添加源文件
+# Add source files
 add_executable(onnx_to_tensorrt src/ONNX_to_TensorRT.cpp)
 
 set_target_properties(onnx_to_tensorrt PROPERTIES
@@ -34,5 +34,5 @@ target_link_libraries(onnx_to_tensorrt
     pthread
 )
 
-# 确保 RPATH 被设置正确
+# Ensure RPATH is set correctly
 set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
