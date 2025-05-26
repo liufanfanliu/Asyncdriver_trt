@@ -3,9 +3,9 @@ import torch.nn as nn
 from transformers import AutoModelForCausalLM, AutoTokenizer
 from peft import PeftModel
 
-model_path = "/path/to/your/model/path"  # 替换为你的模型路径
-onnx_path  = "/path/to/onnx/model.onnx"  # 替换为你的ONNX保存路径
-lora_model_path = "/path/to/lora/model/path"  # 替换为你的LoRA路径
+model_path = "/path/to/your/model/path"
+onnx_path  = "/path/to/onnx/model.onnx"
+lora_model_path = "/path/to/lora/model/path"
 
 device = torch.device("cpu")
 
@@ -44,7 +44,7 @@ class Wrapper(nn.Module):
             use_cache=False,
             output_hidden_states=True
         )
-        # 返回最后一层 hidden_states
+        
         return outputs.hidden_states[-1]
 
 wrapper = Wrapper(model).to(device)

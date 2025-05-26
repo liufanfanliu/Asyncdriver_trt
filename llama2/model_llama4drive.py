@@ -885,7 +885,7 @@ class LlamaModel(LlamaPreTrainedModel):
 
             hidden_states = self.norm(hidden_states)
             t_pop_end = time.time()
-            print(f"[时间] 总耗时: {t_pop_end - t0:.4f}s")
+            print(f"total time: {t_pop_end - t0:.4f}s")
 
         elif inference_model_type == 'onnx':
             infer_engine = ONNXInferSingleton(self.onnx_model_path, providers=['CUDAExecutionProvider'])

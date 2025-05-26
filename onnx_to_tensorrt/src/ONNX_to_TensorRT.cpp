@@ -20,35 +20,32 @@ public:
 
 int main(int argc, char* argv[]) {
     if (argc < 3) {
-        std::cerr << "用法: " << argv[0] << " <onnx模型路径> <engine文件路径>" << std::endl;
-        std::cerr << "示例: " << argv[0] << " /path/to/model.onnx /path/to/model.engine" << std::endl;
+        std::cerr << "Usage: " << argv[0] << " <ONNX model path> <engine output path>" << std::endl;
+        std::cerr << "Example: " << argv[0] << " /path/to/model.onnx /path/to/model.engine" << std::endl;
         return 1;
     }
 
     std::string onnx_filename = argv[1];
     std::string engine_file = argv[2];
 
-    std::cout << "ONNX 文件路径: " << onnx_filename << std::endl;
-    std::cout << "Engine 文件路径: " << engine_file << std::endl;
-
-    // std::string onnx_filename = "/home/nvidia/fan/onnx32_lora_hidden_fold/model.onnx";
-    // const std::string engine_file = "/home/nvidia/fan/onnx32_16_final_lora.engine";
+    std::cout << "ONNX file path: " << onnx_filename << std::endl;
+    std::cout << "Engine output path: " << engine_file << std::endl;
 
     auto builder = std::unique_ptr<nvinfer1::IBuilder>(nvinfer1::createInferBuilder(logger));
     auto config = std::unique_ptr<nvinfer1::IBuilderConfig>(builder->createBuilderConfig());
     if (!builder->platformHasFastFp16()) {
-        std::cerr << "[ERROR] 平台不支持 fast FP16！请检查 JetPack / 驱动是否安装完整。" << std::endl;
+        std::cerr << "[ERROR] Platform does not support fast FP16! Please check if JetPack/driver is properly installed." << std::endl;
         return -1;
     }
-    
+
     config->setMemoryPoolLimit(MemoryPoolType::kWORKSPACE, 2ULL << 30);
 
-    config->setFlag(nvinfer1::BuilderFlag::kFP16);  // Enable FP16 precision  float32   
+    config->setFlag(nvinfer1::BuilderFlag::kFP16);  // Enable FP16 precision (float32 fallback)
     config->clearFlag(nvinfer1::BuilderFlag::kSTRICT_TYPES);
     config->setFlag(BuilderFlag::kPREFER_PRECISION_CONSTRAINTS);
-    config->setTacticSources(1U << static_cast<int>(TacticSource::kCUBLAS));  // 只用 cublas
+    config->setTacticSources(1U << static_cast<int>(TacticSource::kCUBLAS));  // Use only cuBLAS for tactic selection
     // config->setMinTimingIterations(1);
-    // config->setAvgTimingIterations(1);                                // 降低策略搜索复杂度
+    // config->setAvgTimingIterations(1);  // Reduce tactic search complexity
 
 
     uint32_t explicitBatch = 1U << static_cast<uint64_t>(nvinfer1::NetworkDefinitionCreationFlag::kEXPLICIT_BATCH);
@@ -92,7 +89,6 @@ int main(int argc, char* argv[]) {
     }    
 
 
-  
     auto profile = builder->createOptimizationProfile();
 
   

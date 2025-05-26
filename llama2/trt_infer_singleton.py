@@ -24,7 +24,7 @@ class TRTInferSingleton:
         self.device_id = device_id
         self.engine_path = engine_path
 
-        # CUDA上下文只能创建一次
+        # CUDA context should only be created once
         cuda.init()
         self._device = cuda.Device(self.device_id)
         self._context = self._device.make_context()
@@ -37,7 +37,7 @@ class TRTInferSingleton:
 
     def get_engine_and_context(self, engine_path):
         if engine_path not in self._engine_cache:
-            # 加载engine
+            # Load engine
             with open(engine_path, "rb") as f:
                 engine = trt.Runtime(self._trt_logger).deserialize_cuda_engine(f.read())
             self._engine_cache[engine_path] = engine
@@ -49,18 +49,18 @@ class TRTInferSingleton:
         return engine, context
 
     def save_inputs(self, file_path, inputs_embeds, attention_mask, position_ids):
-        """保存推理输入到文件"""
+        """Save inference inputs to file"""
         torch.save({
             "inputs_embeds": inputs_embeds.cpu(),
             "attention_mask": attention_mask.cpu(),
             "position_ids": position_ids.cpu()
         }, file_path)
-        print(f"[保存输入] 保存到 {file_path}")
+        print(f"[Save Inputs] Saved to {file_path}")
 
     def load_inputs_and_infer(self, file_path):
-        """从文件加载输入，并调用 infer"""
+        """Load inputs from file and run inference"""
         data = torch.load(file_path)
-        print(f"[加载输入] 从 {file_path} 加载")
+        print(f"[Load Inputs] Loaded from {file_path}")
         return self.infer_hidden_states(
             data["inputs_embeds"],
             data["attention_mask"],
@@ -89,7 +89,7 @@ class TRTInferSingleton:
             }
             dev = {k: cuda.mem_alloc(buf.nbytes) for k, buf in host.items()}
 
-            # 获取engine和context（缓存）
+            # Get engine and context from cache
             engine, context = self.get_engine_and_context(self.engine_path)
 
             host["emb"][:]  = inputs_embeds.detach().cpu().numpy().ravel()
@@ -122,11 +122,11 @@ class TRTInferSingleton:
             self._first_pop = False
             self._context.pop()
         t_end = time.time()
-        print(f"[时间] 总耗时: {t_end - t0:.4f}s")
+        print(f"[Time] Total time: {t_end - t0:.4f}s")
         return hs_gpu
 
     def clear_cache(self):
-        """手动清空engine/context缓存与CUDA上下文"""
+        """Manually clear engine/context caches and CUDA context"""
         self._engine_cache.clear()
         self._context_cache.clear()
         try:
@@ -136,7 +136,6 @@ class TRTInferSingleton:
 
     def __del__(self):
         self.clear_cache()
-
 
 
 class ONNXInferSingleton:
@@ -170,19 +169,19 @@ class ONNXInferSingleton:
         attention_mask: torch.Tensor,
         position_ids: torch.Tensor,
     ) -> torch.Tensor:
-        # ONNX 输入准备
+
         t0 = time.time()
         onnx_inputs = {
             "inputs_embeds": inputs_embeds.detach().cpu().numpy().astype(np.float16),
             "attention_mask": attention_mask.detach().cpu().numpy().astype(np.int64),
             "position_ids": position_ids.detach().cpu().numpy().astype(np.int64)
         }
-        # 执行推理
+
         ort_session = self.get_cached_session(self.onnx_path)
         hidden_states = ort_session.run(None, onnx_inputs)[0]
         hidden_states = torch.from_numpy(hidden_states).to(torch.float32).to(inputs_embeds.device)
         t_end = time.time()
-        print(f"[时间] 总耗时: {t_end - t0:.4f}s")
+        print(f"[Time] Total time: {t_end - t0:.4f}s")
         return hidden_states
 
     def clear_cache(self):
@@ -192,17 +191,18 @@ class ONNXInferSingleton:
         self.clear_cache()
 
     def load_inputs_and_infer(self, file_path):
-        """从文件加载输入，并调用 infer"""
+        """Load inputs from file and run inference"""
         data = torch.load(file_path)
-        print(f"[加载输入] 从 {file_path} 加载")
+        print(f"[Load Inputs] Loaded from {file_path}")
         return self.infer_hidden_states(
             data["inputs_embeds"],
             data["attention_mask"],
             data["position_ids"]
         )
 
+# for testing purposes
 if __name__ == "__main__":
-    infer_engine = TRTInferSingleton("/path/to/ttensorrt/enigne", device_id=0)
+    infer_engine = TRTInferSingleton("/path/to/tensorrt/engine", device_id=0)
     infer_onnx = ONNXInferSingleton("/path/to/onnx/model", providers=['CUDAExecutionProvider'])
-    output_egine = infer_engine.load_inputs_and_infer("/path/to/input/file")
-    output_onnx = infer_onnx.load_inputs_and_infer("/path/to/input/file")          
+    output_engine = infer_engine.load_inputs_and_infer("/path/to/input/file")
+    output_onnx = infer_onnx.load_inputs_and_infer("/path/to/input/file")
