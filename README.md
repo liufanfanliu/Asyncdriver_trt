@@ -38,11 +38,54 @@ git clone https://github.com/memberRE/AsyncDriver.git && cd AsyncDriver
 
 #### Step 4: Set up the Conda Environment
 
-- **Create the NuPlan Environment:**
+- **For NVIDIA Jetson Orin (ARM64):**
+
+  First, install the JetPack SDK:
+
+  ```bash
+  sudo apt-get update && sudo apt install nvidia-jetpack
+  ```
+
+  Then check your device info:
+
+  ```bash
+  jetson_release
+  ```
+
+  Example output:
+  ```
+  Model: Jetson AGX Orin Developer Kit - Jetpack 5.1.2 [L4T 35.4.1]
+  Power Mode: MODE_50W
+  CUDA: 11.4.315
+  cuDNN: 8.6.0.166
+  TensorRT: 8.5.2.2
+  OpenCV: 4.5.4 - with CUDA: NO
+  ```
+
+- **Create the Jetson Conda Environment:**
+
+  Manually create a Conda environment for Python 3.8 (ARM compatible):
+
+  ```bash
+  conda create -n jetson38 python=3.8 -y
+  conda activate jetson38
+  ```
+
+- **Install Additional Dependencies:**
+
+  After activating the environment, run the ARM-specific setup script:
+
+  ```bash
+  bash env_arm.sh
+  ```
+
+---
+
+- **For x86_64:**
 
   Create a Conda environment based on the provided `environment.yml` file:
 
-  ```
+  ```bash
   conda env create -f environment.yml
   ```
 
@@ -50,7 +93,7 @@ git clone https://github.com/memberRE/AsyncDriver.git && cd AsyncDriver
 
   After setting up the Conda environment, install the additional dependencies listed in the `requirements_asyncdriver.txt`:
 
-  ```
+  ```bash
   pip install -r requirements_asyncdriver.txt
   ```
 
@@ -95,7 +138,74 @@ If you encounter issues with the planner not being found, modify the following l
 
 Training checkpoints is available for [download](https://drive.google.com/file/d/17TLnwgp7T6ke67kgSqnc2dhTCZn83W6a/view?usp=drive_link).
 
-### 3. Training
+
+### 3. Evaluation with TensorRT and ONNX
+
+#### Step 1: Export the ONNX File
+
+Run the following command to export the merged LoRA model to ONNX:
+
+```bash
+python export_onnx.py \
+  --model_path /path/to/base_model \
+  --lora_path /path/to/lora_model \
+  --onnx_path /path/to/output_model.onnx
+```
+
+#### Step 2: Convert ONNX to TensorRT
+
+Navigate to the converter directory, compile the binary, and generate the TensorRT engine:
+
+```bash
+cd onnx_to_tensorrt
+mkdir build && cd build
+cmake ..
+make
+./onnx_to_tensorrt /path/to/model.onnx /path/to/model.engine
+```
+
+#### Step 3: Modify Inference Script
+
+Edit the script `train_script/inference/asyncdriver_infer.sh` and configure the following variables:
+
+- `onnx_model_path`: path to the exported ONNX model.
+- `tensorrt_model_path`: path to the generated TensorRT engine.
+- `inference_model_type`: one of `torch`, `onnx`, or `tensorrt`.
+
+#### Step 4: Run Evaluation
+
+Follow the steps in [Section 2: Evaluation](#2-evaluation) to run model inference using the configured backend.
+
+---
+
+> **Note for NVIDIA Jetson Orin (ARM64):**
+>
+> Due to limited support for LoRA fine-tuning in JetPack 5.1.2, it is recommended to **export the ONNX model on an x86 host machine** and then transfer the exported model to the Orin device.
+>
+> Once transferred, use the following command to sanitize the ONNX file and improve compatibility:
+>
+> ```bash
+> polygraphy surgeon sanitize /path/to/input_model.onnx \
+>     --fold-constants \
+>     -o /path/to/output_model_sanitized.onnx
+> ```
+>
+> You can then generate the TensorRT engine using the sanitized ONNX file by following the steps above.
+
+
+#### Performance on NVIDIA Jetson Orin
+
+The table below compares the inference times of the LoRA-finetuned LLaMA component within AsyncDriver on Jetson Orin across different inference backends and precisions:
+
+| Inference Method            | Time (s) |
+|-----------------------------|---------:|
+| PyTorch (FP16)              |   0.3250 |
+| ONNX Runtime (FP16)         |   0.1265 |
+| ONNX Runtime (FP32)         |   0.1960 |
+| TensorRT (FP16)             |   0.1016 |
+| TensorRT (FP32)             |   0.2149 |
+
+### 4. Training
 
 The training process involves multiple stages:
 
