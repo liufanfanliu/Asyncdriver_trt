@@ -38,11 +38,54 @@ git clone https://github.com/memberRE/AsyncDriver.git && cd AsyncDriver
 
 #### Step 4: Set up the Conda Environment
 
-- **Create the NuPlan Environment:**
+- **For NVIDIA Jetson Orin (ARM64):**
+
+  First, install the JetPack SDK:
+
+  ```bash
+  sudo apt-get update && sudo apt install nvidia-jetpack
+  ```
+
+  Then check your device info:
+
+  ```bash
+  jetson_release
+  ```
+
+  Example output:
+  ```
+  Model: Jetson AGX Orin Developer Kit - Jetpack 5.1.2 [L4T 35.4.1]
+  Power Mode: MODE_50W
+  CUDA: 11.4.315
+  cuDNN: 8.6.0.166
+  TensorRT: 8.5.2.2
+  OpenCV: 4.5.4 - with CUDA: NO
+  ```
+
+- **Create the Jetson Conda Environment:**
+
+  Manually create a Conda environment for Python 3.8 (ARM compatible):
+
+  ```bash
+  conda create -n jetson38 python=3.8 -y
+  conda activate jetson38
+  ```
+
+- **Install Additional Dependencies:**
+
+  After activating the environment, run the ARM-specific setup script:
+
+  ```bash
+  bash env_arm.sh
+  ```
+
+---
+
+- **For x86_64 (e.g., standard Ubuntu desktop/server):**
 
   Create a Conda environment based on the provided `environment.yml` file:
 
-  ```
+  ```bash
   conda env create -f environment.yml
   ```
 
@@ -50,7 +93,7 @@ git clone https://github.com/memberRE/AsyncDriver.git && cd AsyncDriver
 
   After setting up the Conda environment, install the additional dependencies listed in the `requirements_asyncdriver.txt`:
 
-  ```
+  ```bash
   pip install -r requirements_asyncdriver.txt
   ```
 
@@ -132,6 +175,22 @@ Edit the script `train_script/inference/asyncdriver_infer.sh` and configure the 
 #### Step 4: Run Evaluation
 
 Follow the steps in [Section 2: Evaluation](#2-evaluation) to run model inference using the configured backend.
+
+---
+
+> **Note for NVIDIA Jetson Orin (ARM64):**
+>
+> Since JetPack 5.1.2 has limited support for LoRA fine-tuning, it is recommended to **export the ONNX model on an x86 host machine**, then transfer the model to the Orin device.
+>
+> After copying, run the following command to improve ONNX compatibility:
+>
+> ```bash
+> polygraphy surgeon sanitize /home/nvidia/fan/onnx16_lora_hidden/model.onnx \
+>     --fold-constants \
+>     -o /home/nvidia/fan/onnx_16_lora_hidden_fold/model.onnx
+> ```
+>
+> Then proceed with the above TensorRT engine generation steps using the sanitized ONNX file.
 
 #### Performance on NVIDIA Jetson Orin
 
