@@ -81,7 +81,7 @@ git clone https://github.com/memberRE/AsyncDriver.git && cd AsyncDriver
 
 ---
 
-- **For x86_64 (e.g., standard Ubuntu desktop/server):**
+- **For x86_64:**
 
   Create a Conda environment based on the provided `environment.yml` file:
 
