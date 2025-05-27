@@ -95,7 +95,48 @@ If you encounter issues with the planner not being found, modify the following l
 
 Training checkpoints is available for [download](https://drive.google.com/file/d/17TLnwgp7T6ke67kgSqnc2dhTCZn83W6a/view?usp=drive_link).
 
-### 3. Training
+
+### 3. Evaluation with TensorRT and ONNX
+
+#### Step 1: Export the ONNX File
+
+Run the following command to export the merged LoRA model to ONNX:
+
+```bash
+python export_onnx.py \
+  --model_path /path/to/base_model \
+  --lora_path /path/to/lora_model \
+  --onnx_path /path/to/output_model.onnx
+```
+
+#### Step 2: Convert ONNX to TensorRT
+
+Navigate to the converter directory, compile the binary, and generate the TensorRT engine:
+
+```bash
+cd onnx_to_tensorrt
+mkdir build && cd build
+cmake ..
+make
+./onnx_to_tensorrt /path/to/model.onnx /path/to/model.engine
+```
+
+#### Step 3: Modify Inference Script
+
+Edit the script `train_script/inference/asyncdriver_infer.sh` and configure the following variables:
+
+- `onnx_model_path`: path to the exported ONNX model.
+- `tensorrt_model_path`: path to the generated TensorRT engine.
+- `inference_model_type`: one of `torch`, `onnx`, or `tensorrt`.
+
+#### Step 4: Run Evaluation
+
+Follow the steps in [Section 2: Evaluation](#2-evaluation) to run model inference using the configured backend.
+
+
+
+
+### 4. Training
 
 The training process involves multiple stages:
 
