@@ -133,8 +133,17 @@ Edit the script `train_script/inference/asyncdriver_infer.sh` and configure the 
 
 Follow the steps in [Section 2: Evaluation](#2-evaluation) to run model inference using the configured backend.
 
+#### Performance on NVIDIA Jetson Orin\
 
+The table below compares the inference times of the LoRA-finetuned LLaMA component within AsyncDriver on Jetson Orin across different inference backends and precisions:
 
+| Inference Method            | Time (s) |
+|-----------------------------|---------:|
+| PyTorch (FP16)              |   0.3250 |
+| ONNX Runtime (FP16)         |   0.1265 |
+| ONNX Runtime (FP32)         |   0.1960 |
+| TensorRT (FP16)             |   0.1016 |
+| TensorRT (FP32)             |   0.2149 |
 
 ### 4. Training
 
