@@ -180,17 +180,18 @@ Follow the steps in [Section 2: Evaluation](#2-evaluation) to run model inferenc
 
 > **Note for NVIDIA Jetson Orin (ARM64):**
 >
-> Since JetPack 5.1.2 has limited support for LoRA fine-tuning, it is recommended to **export the ONNX model on an x86 host machine**, then transfer the model to the Orin device.
+> Due to limited support for LoRA fine-tuning in JetPack 5.1.2, it is recommended to **export the ONNX model on an x86 host machine** and then transfer the exported model to the Orin device.
 >
-> After copying, run the following command to improve ONNX compatibility:
+> Once transferred, use the following command to sanitize the ONNX file and improve compatibility:
 >
 > ```bash
-> polygraphy surgeon sanitize /home/nvidia/fan/onnx16_lora_hidden/model.onnx \
+> polygraphy surgeon sanitize /path/to/input_model.onnx \
 >     --fold-constants \
->     -o /home/nvidia/fan/onnx_16_lora_hidden_fold/model.onnx
+>     -o /path/to/output_model_sanitized.onnx
 > ```
 >
-> Then proceed with the above TensorRT engine generation steps using the sanitized ONNX file.
+> You can then generate the TensorRT engine using the sanitized ONNX file by following the steps above.
+
 
 #### Performance on NVIDIA Jetson Orin
 
